@@ -1,9 +1,17 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service';
 import { SignInDto } from 'src/auth/dto/signin.dto';
 import { SignUpDto } from 'src/auth/dto/signup.dto';
+import { ResponseDto } from 'src/common/dto/response.dto';
+import { UserDocument } from 'src/user/schemas/user.schema';
 
 @Injectable()
 export class AuthService {
@@ -14,12 +22,29 @@ export class AuthService {
   ) {}
 
   async signUp(signUpDto: SignUpDto): Promise<any> {
-    const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
-    const user = await this.userService.createUser(
-      signUpDto.email,
-      hashedPassword,
-    );
-    return { message: 'User created successfully' };
+    try {
+      const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
+      const user = await this.userService.createUser(
+        signUpDto.email,
+        hashedPassword,
+      );
+      const response: ResponseDto<Partial<UserDocument>> = {
+        statusCode: 201,
+        message: `User ${user.email} created successfully`,
+        data: {
+          _id: user._id,
+          email: user.email,
+        },
+      };
+      return response;
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ConflictException('User with this email already exists');
+      }
+      throw new InternalServerErrorException(
+        'An error occurred during sign-up',
+      );
+    }
   }
 
   async signIn(signInDto: SignInDto): Promise<any> {
@@ -38,8 +63,11 @@ export class AuthService {
     }
     const payload = { email: user.email, sub: user._id };
     this.logger.log(`Successful sign in for ${signInDto.email}`);
-    return {
-      access_token: this.jwtService.sign(payload),
+    const response: ResponseDto<{ access_token: string }> = {
+      statusCode: 200,
+      message: 'User signed in successfully',
+      data: { access_token: this.jwtService.sign(payload) },
     };
+    return response;
   }
 }
