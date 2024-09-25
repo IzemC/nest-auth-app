@@ -23,9 +23,12 @@ async function bootstrap() {
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
       credentials: true,
     });
-  }
-
-  if (stage !== PRODUCTION_STAGE) {
+  } else {
+    app.enableCors({
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    });
     const config = new DocumentBuilder()
       .setTitle('App API documentation')
       .setDescription('API for User Sign-Up and Sign-In')
