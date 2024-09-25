@@ -63,10 +63,16 @@ export class AuthService {
     }
     const payload = { email: user.email, sub: user._id };
     this.logger.log(`Successful sign in for ${signInDto.email}`);
-    const response: ResponseDto<{ access_token: string }> = {
+    const response: ResponseDto<
+      { access_token: string } & Partial<UserDocument>
+    > = {
       statusCode: 200,
       message: 'User signed in successfully',
-      data: { access_token: this.jwtService.sign(payload) },
+      data: {
+        access_token: this.jwtService.sign(payload),
+        email: user.email,
+        _id: user._id,
+      },
     };
     return response;
   }
